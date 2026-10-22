@@ -1,0 +1,920 @@
+-- ==============================================================================
+-- AVIZER3 REMAKE - TERMINAL EDITION v6.1 (Admin Editing)
+-- ==============================================================================
+-- Admin Pass: vizer.larper10k (Go to the 'Admin' tab in the menu)
+-- Note: To see the Admin Edit tools, you must authenticate in the Admin tab.
+-- ==============================================================================
+
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local Stats = game:GetService("Stats")
+
+local localPlayer = Players.LocalPlayer
+
+-- ==============================================================================
+-- CLEANUP
+-- ==============================================================================
+local oldUI = CoreGui:FindFirstChild("AvizerTerminalUI")
+if oldUI then oldUI:Destroy() end
+
+-- ==============================================================================
+-- CONFIGURATION & THEME
+-- ==============================================================================
+local Config = {
+    AdminPass = "vizer.larper10k",
+    File = "avizer3_config.json",
+    Favorites = {},
+    Recent = {},
+    CustomScripts = {},
+    IsAdmin = false,
+    WatermarkOn = true,
+    MenuTitle = "Administrator: avizer3 owner",
+    UITitle = "[-] avizer3 remake v6.1",
+    DynamicTabs = {}
+}
+
+local Theme = {
+    Bg = Color3.fromRGB(10, 10, 10),
+    TitleBar = Color3.fromRGB(25, 25, 25),
+    Border = Color3.fromRGB(60, 60, 60),
+    TextMain = Color3.fromRGB(230, 230, 230),
+    TextDim = Color3.fromRGB(120, 120, 120),
+    Red = Color3.fromRGB(255, 65, 65),
+    Green = Color3.fromRGB(0, 255, 100),
+    Error = Color3.fromRGB(255, 0, 0),
+    Font = Enum.Font.Code
+}
+
+-- ==============================================================================
+-- PERSISTENCE HANDLING
+-- ==============================================================================
+local function LoadConfig()
+    local success, data = pcall(function()
+        if isfile and isfile(Config.File) then
+            return HttpService:JSONDecode(readfile(Config.File))
+        end
+    end)
+    
+    if success and data then
+        if data.Favorites then Config.Favorites = data.Favorites end
+        if data.Recent then Config.Recent = data.Recent end
+        if data.CustomScripts then Config.CustomScripts = data.CustomScripts end
+        if data.DynamicTabs then Config.DynamicTabs = data.DynamicTabs end
+    end
+end
+
+local function SaveConfig()
+    pcall(function()
+        if writefile then
+            local dataToSave = {
+                Favorites = Config.Favorites,
+                Recent = Config.Recent,
+                CustomScripts = Config.CustomScripts,
+                DynamicTabs = Config.DynamicTabs
+            }
+            writefile(Config.File, HttpService:JSONEncode(dataToSave))
+        end
+    end)
+end
+
+LoadConfig()
+
+-- ==============================================================================
+-- DATABASE
+-- ==============================================================================
+local Database = {
+    ["Premium"] = {
+        ["Vortex"] = "https://rawscripts.net/raw/Fling-Things-and-People-FTAP-Vortex-Hub-228539",
+        ["Nile"] = "https://pastefy.app/w0TpJ7bn/raw",
+        ["NeverLose"] = "https://pastefy.app/ATPWcoEb/raw",
+        ["Blitz"] = "https://pastefy.app/BHQ1xXjK/raw",
+        ["Vizer"] = "https://raw.githubusercontent.com/dray29471-del/VIZERbest/refs/heads/main/VIZERbest.lua",
+        ["Oblivion"] = "https://gist.githubusercontent.com/safonovmaksima-commits/65ca3fad4743c91ebbf5fadf5bebe066/raw/ed95e5a9b06de9b134422c0531e3aa406cd9af7b/vhr222",
+        ["Bloody v2"] = "https://raw.githubusercontent.com/celestialteam/youhateme/refs/heads/main/BloodyPremiumCrack.lua"
+    },
+    ["Visuals"] = {
+        ["Fosfor visuals"] = "https://pastefy.app/I0P2dXal/raw",
+        ["Mercury"] = "https://paste.c-net.org/ResignDolly",
+        ["Silent Target"] = "https://pastefy.app/v9CUbtQQ/raw"
+    },
+    ["Other Hubs"] = {
+        ["Lunar"] = "https://pastefy.app/bscLo4n8/raw",
+        ["Drun script"] = "https://paste.c-net.org/BeggingShady",
+        ["Eris"] = "https://pastefy.app/PTcKa7zg/raw"
+    },
+    ["Henrynah Repo"] = {},
+    ["Custom"] = Config.CustomScripts or {}
+}
+
+-- ==============================================================================
+-- UI INITIALIZATION
+-- ==============================================================================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AvizerTerminalUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = CoreGui
+
+-- ==============================================================================
+-- WATERMARK
+-- ==============================================================================
+local Watermark = Instance.new("Frame")
+Watermark.Size = UDim2.new(0, 260, 0, 45)
+Watermark.Position = UDim2.new(0, 15, 1, -60)
+Watermark.BackgroundColor3 = Theme.Bg
+Watermark.BorderSizePixel = 0
+Watermark.Visible = Config.WatermarkOn
+Watermark.Parent = ScreenGui
+
+local WmStroke = Instance.new("UIStroke")
+WmStroke.Color = Theme.Border
+WmStroke.Thickness = 1
+WmStroke.Parent = Watermark
+
+local WmText = Instance.new("TextLabel")
+WmText.Size = UDim2.new(1, -10, 1, -10)
+WmText.Position = UDim2.new(0, 5, 0, 5)
+WmText.BackgroundTransparency = 1
+WmText.TextColor3 = Theme.TextDim
+WmText.Font = Theme.Font
+WmText.TextSize = 11
+WmText.TextXAlignment = Enum.TextXAlignment.Left
+WmText.TextYAlignment = Enum.TextYAlignment.Top
+WmText.Parent = Watermark
+
+local frames = 0
+local lastTime = tick()
+RunService.RenderStepped:Connect(function()
+    if not Config.WatermarkOn then return end
+    frames = frames + 1
+    if tick() - lastTime >= 1 then
+        local ping = 0
+        pcall(function() ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
+        local mem = 0
+        pcall(function() mem = math.floor(gcinfo() / 1024) end)
+        local time = os.date("%H:%M:%S")
+        WmText.Text = string.format("%s\n[-] FPS: %d | Ping: %dms | Mem: %dMB\n[-] Time: %s", Config.UITitle, frames, ping, mem, time)
+        frames = 0
+        lastTime = tick()
+    end
+end)
+
+-- ==============================================================================
+-- MAIN WINDOW
+-- ==============================================================================
+local Main = Instance.new("Frame")
+Main.Size = UDim2.new(0, 700, 0, 480)
+Main.Position = UDim2.new(0.5, -350, 0.5, -240)
+Main.BackgroundColor3 = Theme.Bg
+Main.BorderSizePixel = 0
+Main.Active = true
+Main.Parent = ScreenGui
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = Theme.Border
+MainStroke.Thickness = 1
+MainStroke.Parent = Main
+
+-- Title Bar
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 25)
+TitleBar.BackgroundColor3 = Theme.TitleBar
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = Main
+
+local TitleText = Instance.new("TextLabel")
+TitleText.Size = UDim2.new(1, -150, 1, 0)
+TitleText.Position = UDim2.new(0, 10, 0, 0)
+TitleText.BackgroundTransparency = 1
+TitleText.Text = Config.MenuTitle
+TitleText.TextColor3 = Theme.TextMain
+TitleText.Font = Theme.Font
+TitleText.TextSize = 12
+TitleText.TextXAlignment = Enum.TextXAlignment.Left
+TitleText.Parent = TitleBar
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 30, 1, 0)
+CloseBtn.Position = UDim2.new(1, -30, 0, 0)
+CloseBtn.BackgroundTransparency = 1
+CloseBtn.Text = "[X]"
+CloseBtn.TextColor3 = Theme.TextMain
+CloseBtn.Font = Theme.Font
+CloseBtn.Parent = TitleBar
+CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+-- ==============================================================================
+-- 1. LOADING SCREEN (ASCII ART)
+-- ==============================================================================
+local LoadingFrame = Instance.new("Frame")
+LoadingFrame.Size = UDim2.new(1, 0, 1, -25)
+LoadingFrame.Position = UDim2.new(0, 0, 0, 25)
+LoadingFrame.BackgroundTransparency = 1
+LoadingFrame.Visible = true
+LoadingFrame.Parent = Main
+
+local AsciiArt = [[
+    ___   _   _ ___ _____ _____ ____    _____ 
+   / _ \ | | | |_ _|__  /| ____|  _ \  |___ / 
+  / /_\ \| | | || |  / / |  _| | |_) |   |_ \ 
+  / ___ \| |_| || | / /_ | |___|  _ <   ___) |
+ /_/   \_\\___/|___/____||_____|_| \_\ |____/ 
+]]
+
+local AsciiLabel = Instance.new("TextLabel")
+AsciiLabel.Size = UDim2.new(1, 0, 0, 120)
+AsciiLabel.Position = UDim2.new(0, 0, 0, 60)
+AsciiLabel.BackgroundTransparency = 1
+AsciiLabel.Text = AsciiArt
+AsciiLabel.TextColor3 = Theme.TextDim
+AsciiLabel.Font = Theme.Font
+AsciiLabel.TextSize = 14
+AsciiLabel.Parent = LoadingFrame
+
+local LoadStatus = Instance.new("TextLabel")
+LoadStatus.Size = UDim2.new(1, 0, 0, 20)
+LoadStatus.Position = UDim2.new(0, 0, 0, 200)
+LoadStatus.BackgroundTransparency = 1
+LoadStatus.Text = "[-] Loading avizer3 remake..."
+LoadStatus.TextColor3 = Theme.Green
+LoadStatus.Font = Theme.Font
+LoadStatus.TextSize = 14
+LoadStatus.Parent = LoadingFrame
+
+-- ==============================================================================
+-- 2. MAIN MENU
+-- ==============================================================================
+local MenuFrame = Instance.new("Frame")
+MenuFrame.Size = UDim2.new(1, 0, 1, -25)
+MenuFrame.Position = UDim2.new(0, 0, 0, 25)
+MenuFrame.BackgroundTransparency = 1
+MenuFrame.Visible = false
+MenuFrame.Parent = Main
+
+-- Sidebar
+local Sidebar = Instance.new("Frame")
+Sidebar.Size = UDim2.new(0, 170, 1, -60)
+Sidebar.Position = UDim2.new(0, 0, 0, 30)
+Sidebar.BackgroundTransparency = 1
+Sidebar.Parent = MenuFrame
+
+local SidebarLayout = Instance.new("UIListLayout")
+SidebarLayout.Padding = UDim.new(0, 4)
+SidebarLayout.SortOrder = Enum.SortOrder.LayoutOrder
+SidebarLayout.Parent = Sidebar
+
+local SidebarPad = Instance.new("UIPadding")
+SidebarPad.PaddingTop = UDim.new(0, 10)
+SidebarPad.PaddingLeft = UDim.new(0, 10)
+SidebarPad.Parent = Sidebar
+
+-- Search
+local SearchBox = Instance.new("TextBox")
+SearchBox.Size = UDim2.new(1, -20, 0, 20)
+SearchBox.Position = UDim2.new(0, 10, 0, 0)
+SearchBox.BackgroundColor3 = Theme.TitleBar
+SearchBox.Text = ""
+SearchBox.PlaceholderText = "[-] Search..."
+SearchBox.TextColor3 = Theme.TextMain
+SearchBox.PlaceholderColor3 = Theme.TextDim
+SearchBox.Font = Theme.Font
+SearchBox.TextSize = 12
+SearchBox.Parent = MenuFrame
+
+-- Content Area
+local Content = Instance.new("Frame")
+Content.Size = UDim2.new(1, -170, 1, -60)
+Content.Position = UDim2.new(0, 170, 0, 30)
+Content.BackgroundTransparency = 1
+Content.Parent = MenuFrame
+
+local ScrollFrame = Instance.new("ScrollingFrame")
+ScrollFrame.Size = UDim2.new(1, -20, 1, -20)
+ScrollFrame.Position = UDim2.new(0, 10, 0, 0)
+ScrollFrame.BackgroundTransparency = 1
+ScrollFrame.BorderSizePixel = 0
+ScrollFrame.ScrollBarThickness = 4
+ScrollFrame.ScrollBarImageColor3 = Theme.TextDim
+ScrollFrame.Parent = Content
+
+local ListLayout = Instance.new("UIListLayout")
+ListLayout.Padding = UDim.new(0, 4)
+ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ListLayout.Parent = ScrollFrame
+
+ListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, ListLayout.AbsoluteContentSize.Y + 20)
+end)
+
+-- Log Console
+local LogFrame = Instance.new("Frame")
+LogFrame.Size = UDim2.new(1, 0, 0, 80)
+LogFrame.Position = UDim2.new(0, 0, 1, -80)
+LogFrame.BackgroundColor3 = Theme.TitleBar
+LogFrame.BorderSizePixel = 0
+LogFrame.Parent = MenuFrame
+
+local LogScroll = Instance.new("ScrollingFrame")
+LogScroll.Size = UDim2.new(1, -10, 1, -10)
+LogScroll.Position = UDim2.new(0, 5, 0, 5)
+LogScroll.BackgroundTransparency = 1
+LogScroll.BorderSizePixel = 0
+LogScroll.ScrollBarThickness = 2
+LogScroll.ScrollBarImageColor3 = Theme.TextDim
+LogScroll.Parent = LogFrame
+
+local LogLayout = Instance.new("UIListLayout")
+LogLayout.Padding = UDim.new(0, 2)
+LogLayout.Parent = LogScroll
+
+local LogCount = 0
+local function addLog(text, color)
+    LogCount = LogCount + 1
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, 0, 0, 15)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = "[-] " .. text
+    lbl.TextColor3 = color or Theme.TextMain
+    lbl.Font = Theme.Font
+    lbl.TextSize = 11
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.LayoutOrder = LogCount
+    lbl.Parent = LogScroll
+    LogScroll.CanvasSize = UDim2.new(0, 0, 0, LogLayout.AbsoluteContentSize.Y)
+    LogScroll.CanvasPosition = Vector2.new(0, LogLayout.AbsoluteContentSize.Y)
+end
+
+-- Input Command Line
+local InputArea = Instance.new("Frame")
+InputArea.Size = UDim2.new(1, 0, 0, 30)
+InputArea.Position = UDim2.new(0, 0, 1, -30)
+InputArea.BackgroundColor3 = Theme.Bg
+InputArea.BorderSizePixel = 0
+InputArea.Parent = MenuFrame
+
+local InputPrompt = Instance.new("TextLabel")
+InputPrompt.Size = UDim2.new(0, 110, 1, 0)
+InputPrompt.Position = UDim2.new(0, 10, 0, 0)
+InputPrompt.BackgroundTransparency = 1
+InputPrompt.Text = "root@avizer3:~$"
+InputPrompt.TextColor3 = Theme.Red
+InputPrompt.Font = Theme.Font
+InputPrompt.TextSize = 12
+InputPrompt.TextXAlignment = Enum.TextXAlignment.Left
+InputPrompt.Parent = InputArea
+
+local InputBox = Instance.new("TextBox")
+InputBox.Size = UDim2.new(1, -120, 1, 0)
+InputBox.Position = UDim2.new(0, 115, 0, 0)
+InputBox.BackgroundTransparency = 1
+InputBox.Text = ""
+InputBox.TextColor3 = Theme.TextMain
+InputBox.Font = Theme.Font
+InputBox.TextSize = 12
+InputBox.TextXAlignment = Enum.TextXAlignment.Left
+InputBox.ClearTextOnFocus = false
+InputBox.Parent = InputArea
+
+-- ==============================================================================
+-- TABS & LOGIC
+-- ==============================================================================
+-- Admin tab is placed at the VERY TOP so it's visible immediately
+local MainTabs = {
+    "Admin", "Favorites", "Recent", "Premium", "Visuals", "Other Hubs", 
+    "Henrynah Repo", "Custom", "Settings", "Credits", "Changelog", 
+    "Discord", "Teleports", "Modules", "Exploits", "Funny", 
+    "Terminal", "Info", "Tools"
+}
+
+local AdminTabs = {
+    -- Original 15
+    "Upload Script", "Server Hopper", "Mass Fling", "Webhook Spam", 
+    "Asset Logger", "Script Dumper", "Player Info", "Anti-Kick", 
+    "Ping Spoof", "Super Aimbot", "ESP Master", "Admin Console", 
+    "Dev Tools", "UI Themer", "Panic Button",
+    -- 10 New Admin Tabs
+    "IP Logger", "Server Crasher", "Infinite Yield", "Chat Spammer", 
+    "Walk Speed", "Jump Power", "Invisible Mode", "Noclip Master", 
+    "Fly Exploit", "God Mode"
+}
+
+-- Append dynamically created admin tabs
+for _, dynTab in ipairs(Config.DynamicTabs) do
+    table.insert(AdminTabs, dynTab)
+end
+
+local CurrentCategory = "Premium"
+
+local function ExecuteScript(name, url)
+    addLog("Injecting " .. name .. "...", Theme.TextMain)
+    
+    if not table.find(Config.Recent, name) then
+        table.insert(Config.Recent, 1, name)
+        if #Config.Recent > 10 then table.remove(Config.Recent, 11) end
+        SaveConfig()
+    end
+
+    task.spawn(function()
+        local success, err = pcall(function()
+            loadstring(game:HttpGet(url))()
+        end)
+        
+        if success then
+            addLog("Successfully injected " .. name, Theme.Green)
+            InputBox.Text = ""
+        else
+            addLog("Failed: " .. tostring(err), Theme.Error)
+        end
+    end)
+end
+
+local function BuildSidebar()
+    for _, v in pairs(Sidebar:GetChildren()) do
+        if v:IsA("TextButton") then v:Destroy() end
+    end
+    
+    local tabs = {}
+    for _, t in ipairs(MainTabs) do table.insert(tabs, t) end
+    if Config.IsAdmin then
+        for _, t in ipairs(AdminTabs) do table.insert(tabs, "★ " .. t) end
+    end
+    
+    for i, catName in ipairs(tabs) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, 0, 0, 20)
+        btn.BackgroundTransparency = 1
+        btn.Text = "[-] " .. catName
+        btn.TextColor3 = (catName == CurrentCategory) and Theme.TextMain or Theme.TextDim
+        btn.Font = Theme.Font
+        btn.TextSize = 12
+        btn.TextXAlignment = Enum.TextXAlignment.Left
+        btn.LayoutOrder = i
+        btn.Parent = Sidebar
+        
+        btn.MouseButton1Click:Connect(function()
+            CurrentCategory = catName
+            BuildSidebar()
+            LoadCategory(catName, SearchBox.Text)
+        end)
+    end
+end
+
+function LoadCategory(catName, filter)
+    for _, v in pairs(ScrollFrame:GetChildren()) do
+        if v:IsA("TextButton") or v:IsA("TextBox") or v:IsA("Frame") or v:IsA("TextLabel") then v:Destroy() end
+    end
+    
+    -- ===== ADMIN TAB (The new editing console) =====
+    if catName == "Admin" then
+        if not Config.IsAdmin then
+            local authInput = Instance.new("TextBox")
+            authInput.Size = UDim2.new(0.6, -5, 0, 20)
+            authInput.BackgroundColor3 = Theme.TitleBar
+            authInput.PlaceholderText = "Enter Admin Pass..."
+            authInput.TextColor3 = Theme.Red
+            authInput.Font = Theme.Font
+            authInput.Parent = ScrollFrame
+            
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(0.4, -5, 0, 20)
+            btn.BackgroundColor3 = Theme.Border
+            btn.Text = "[-] AUTHENTICATE"
+            btn.TextColor3 = Theme.TextMain
+            btn.Font = Theme.Font
+            btn.Parent = ScrollFrame
+            
+            btn.MouseButton1Click:Connect(function()
+                if authInput.Text == Config.AdminPass then
+                    Config.IsAdmin = true
+                    BuildSidebar()
+                    addLog("Admin access granted.", Theme.Green)
+                    LoadCategory("Admin")
+                else
+                    addLog("Invalid Admin Pass.", Theme.Error)
+                end
+            end)
+        else
+            -- Admin is authenticated, show editing tools
+            local titleLabel = Instance.new("TextLabel")
+            titleLabel.Size = UDim2.new(1, 0, 0, 20)
+            titleLabel.BackgroundTransparency = 1
+            titleLabel.Text = "[-] Admin Control Panel (Editing Menu)"
+            titleLabel.TextColor3 = Theme.Green
+            titleLabel.Font = Theme.Font
+            titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+            titleLabel.Parent = ScrollFrame
+
+            local titleBox = Instance.new("TextBox")
+            titleBox.Size = UDim2.new(1, 0, 0, 20)
+            titleBox.BackgroundColor3 = Theme.TitleBar
+            titleBox.PlaceholderText = "Change Window Title (Current: " .. Config.MenuTitle .. ")"
+            titleBox.Text = ""
+            titleBox.TextColor3 = Theme.TextMain
+            titleBox.Font = Theme.Font
+            titleBox.Parent = ScrollFrame
+            
+            local applyTitle = Instance.new("TextButton")
+            applyTitle.Size = UDim2.new(1, 0, 0, 20)
+            applyTitle.BackgroundColor3 = Theme.Green
+            applyTitle.Text = "[-] APPLY TITLE"
+            applyTitle.TextColor3 = Theme.Bg
+            applyTitle.Font = Theme.Font
+            applyTitle.Parent = ScrollFrame
+            applyTitle.MouseButton1Click:Connect(function()
+                if titleBox.Text ~= "" then
+                    Config.MenuTitle = titleBox.Text
+                    TitleText.Text = Config.MenuTitle
+                    addLog("Window title changed.", Theme.Green)
+                end
+            end)
+
+            local tabBox = Instance.new("TextBox")
+            tabBox.Size = UDim2.new(0.5, -5, 0, 20)
+            tabBox.BackgroundColor3 = Theme.TitleBar
+            tabBox.PlaceholderText = "New Tab Name"
+            tabBox.TextColor3 = Theme.TextMain
+            tabBox.Font = Theme.Font
+            tabBox.Parent = ScrollFrame
+
+            local urlBox = Instance.new("TextBox")
+            urlBox.Size = UDim2.new(0.5, -5, 0, 20)
+            urlBox.BackgroundColor3 = Theme.TitleBar
+            urlBox.PlaceholderText = "Raw URL"
+            urlBox.TextColor3 = Theme.TextMain
+            urlBox.Font = Theme.Font
+            urlBox.Parent = ScrollFrame
+
+            local addTabBtn = Instance.new("TextButton")
+            addTabBtn.Size = UDim2.new(1, 0, 0, 20)
+            addTabBtn.BackgroundColor3 = Theme.Border
+            addTabBtn.Text = "[-] CREATE CUSTOM ADMIN TAB"
+            addTabBtn.TextColor3 = Theme.TextMain
+            addTabBtn.Font = Theme.Font
+            addTabBtn.Parent = ScrollFrame
+            addTabBtn.MouseButton1Click:Connect(function()
+                if tabBox.Text ~= "" and urlBox.Text ~= "" then
+                    local newTabName = tabBox.Text
+                    table.insert(Config.DynamicTabs, newTabName)
+                    Database[newTabName] = {[newTabName] = urlBox.Text}
+                    table.insert(AdminTabs, newTabName)
+                    SaveConfig()
+                    BuildSidebar()
+                    addLog("Created admin tab: " .. newTabName, Theme.Green)
+                end
+            end)
+        end
+        return
+    end
+
+    -- ===== SETTINGS TAB =====
+    if catName == "Settings" then
+        local wmBtn = Instance.new("TextButton")
+        wmBtn.Size = UDim2.new(1, 0, 0, 20)
+        wmBtn.BackgroundTransparency = 1
+        wmBtn.Text = "[-] Toggle Watermark (Currently: " .. (Config.WatermarkOn and "ON" or "OFF") .. ")"
+        wmBtn.TextColor3 = Theme.TextMain
+        wmBtn.Font = Theme.Font
+        wmBtn.TextSize = 12
+        wmBtn.TextXAlignment = Enum.TextXAlignment.Left
+        wmBtn.Parent = ScrollFrame
+        wmBtn.MouseButton1Click:Connect(function()
+            Config.WatermarkOn = not Config.WatermarkOn
+            Watermark.Visible = Config.WatermarkOn
+            LoadCategory("Settings")
+        end)
+
+        local resetBtn = Instance.new("TextButton")
+        resetBtn.Size = UDim2.new(1, 0, 0, 20)
+        resetBtn.BackgroundTransparency = 1
+        resetBtn.Text = "[-] Reset All Configs & Favorites"
+        resetBtn.TextColor3 = Theme.Red
+        resetBtn.Font = Theme.Font
+        resetBtn.TextSize = 12
+        resetBtn.TextXAlignment = Enum.TextXAlignment.Left
+        resetBtn.Parent = ScrollFrame
+        resetBtn.MouseButton1Click:Connect(function()
+            Config.Favorites = {}
+            Config.Recent = {}
+            Config.CustomScripts = {}
+            SaveConfig()
+            addLog("Configs reset.", Theme.Green)
+        end)
+        return
+    end
+
+    -- ===== GENERAL TABS (Placeholders) =====
+    if catName == "Credits" then
+        local lbl = Instance.new("TextLabel")
+        lbl.Size = UDim2.new(1, 0, 0, 60)
+        lbl.BackgroundTransparency = 1
+        lbl.Text = "[-] Avizer3 Remake v6.1\n[-] UI by avizer3\n[-] Source by GitHub Community"
+        lbl.TextColor3 = Theme.TextMain
+        lbl.Font = Theme.Font
+        lbl.TextSize = 12
+        lbl.TextXAlignment = Enum.TextXAlignment.Left
+        lbl.Parent = ScrollFrame
+        return
+    end
+    
+    if catName == "Changelog" then
+        local lbl = Instance.new("TextLabel")
+        lbl.Size = UDim2.new(1, 0, 0, 60)
+        lbl.BackgroundTransparency = 1
+        lbl.Text = "[-] v6.1 - Restored Admin tab, added dynamic UI editing.\n[-] v6.0 - Added Settings, 10 Main Tabs, 10 Admin Tabs.\n[-] v5.0 - Removed key system, fixed blank UI.\n[-] v4.0 - Added GitHub Repo fetcher."
+        lbl.TextColor3 = Theme.TextDim
+        lbl.Font = Theme.Font
+        lbl.TextSize = 12
+        lbl.TextXAlignment = Enum.TextXAlignment.Left
+        lbl.Parent = ScrollFrame
+        return
+    end
+
+    if catName == "Discord" then
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, 0, 0, 20)
+        btn.BackgroundTransparency = 1
+        btn.Text = "[-] Copy Discord Link to Clipboard"
+        btn.TextColor3 = Theme.TextMain
+        btn.Font = Theme.Font
+        btn.TextSize = 12
+        btn.TextXAlignment = Enum.TextXAlignment.Left
+        btn.Parent = ScrollFrame
+        btn.MouseButton1Click:Connect(function()
+            pcall(function() setclipboard("https://discord.gg/avizer3") end)
+            addLog("Discord link copied.", Theme.Green)
+        end)
+        return
+    end
+
+    -- Generic placeholder for new tabs
+    if catName == "Teleports" or catName == "Modules" or catName == "Exploits" or catName == "Funny" or catName == "Terminal" or catName == "Info" or catName == "Tools" then
+        local lbl = Instance.new("TextLabel")
+        lbl.Size = UDim2.new(1, 0, 0, 20)
+        lbl.BackgroundTransparency = 1
+        lbl.Text = "[-] " .. catName .. " category ready for scripts."
+        lbl.TextColor3 = Theme.Dim
+        lbl.Font = Theme.Font
+        lbl.Parent = ScrollFrame
+        return
+    end
+
+    -- ===== ADMIN TABS =====
+    if string.find(catName, "★") then
+        if catName == "★ Upload Script" then
+            local nameBox = Instance.new("TextBox")
+            nameBox.Size = UDim2.new(0.5, -5, 0, 20)
+            nameBox.BackgroundColor3 = Theme.TitleBar
+            nameBox.PlaceholderText = "Script Name"
+            nameBox.TextColor3 = Theme.TextMain
+            nameBox.Font = Theme.Font
+            nameBox.Parent = ScrollFrame
+            
+            local urlBox = Instance.new("TextBox")
+            urlBox.Size = UDim2.new(0.5, -5, 0, 20)
+            urlBox.BackgroundColor3 = Theme.TitleBar
+            urlBox.PlaceholderText = "Raw URL"
+            urlBox.TextColor3 = Theme.TextMain
+            urlBox.Font = Theme.Font
+            urlBox.Parent = ScrollFrame
+            
+            local saveBtn = Instance.new("TextButton")
+            saveBtn.Size = UDim2.new(1, 0, 0, 20)
+            saveBtn.BackgroundColor3 = Theme.Green
+            saveBtn.Text = "[-] SAVE TO CUSTOM TAB"
+            saveBtn.TextColor3 = Theme.Bg
+            saveBtn.Font = Theme.Font
+            saveBtn.Parent = ScrollFrame
+            
+            saveBtn.MouseButton1Click:Connect(function()
+                if nameBox.Text ~= "" and urlBox.Text ~= "" then
+                    Config.CustomScripts[nameBox.Text] = urlBox.Text
+                    Database["Custom"][nameBox.Text] = urlBox.Text
+                    SaveConfig()
+                    addLog("Saved " .. nameBox.Text .. " to Custom", Theme.Green)
+                end
+            end)
+            return
+        else
+            -- Check if this is a dynamic tab that holds a script
+            if Database[catName] then
+                local scriptData = nil
+                for k, v in pairs(Database[catName]) do scriptData = {Name = k, Url = v} end
+                if scriptData then
+                    local btn = Instance.new("TextButton")
+                    btn.Size = UDim2.new(1, 0, 0, 20)
+                    btn.BackgroundTransparency = 1
+                    btn.Text = "[-] Execute " .. scriptData.Name
+                    btn.TextColor3 = Theme.Green
+                    btn.Font = Theme.Font
+                    btn.TextXAlignment = Enum.TextXAlignment.Left
+                    btn.Parent = ScrollFrame
+                    btn.MouseButton1Click:Connect(function()
+                        ExecuteScript(scriptData.Name, scriptData.Url)
+                    end)
+                    return
+                end
+            end
+            -- Generic Admin Tabs (Visual Only)
+            local lbl = Instance.new("TextLabel")
+            lbl.Size = UDim2.new(1, 0, 0, 20)
+            lbl.BackgroundTransparency = 1
+            lbl.Text = "[-] Admin Feature: " .. catName .. " executed."
+            lbl.TextColor3 = Theme.Green
+            lbl.Font = Theme.Font
+            lbl.Parent = ScrollFrame
+            return
+        end
+    end
+
+    -- ===== HENRYNAH REPO =====
+    if catName == "Henrynah Repo" then
+        local fetchBtn = Instance.new("TextButton")
+        fetchBtn.Size = UDim2.new(1, 0, 0, 20)
+        fetchBtn.BackgroundColor3 = Theme.TitleBar
+        fetchBtn.Text = "[-] Fetch Repo Tree (github.com/Henrynah/source)"
+        fetchBtn.TextColor3 = Theme.TextMain
+        fetchBtn.Font = Theme.Font
+        fetchBtn.Parent = ScrollFrame
+        
+        fetchBtn.MouseButton1Click:Connect(function()
+            fetchBtn.Text = "[-] Fetching... (wait)"
+            task.spawn(function()
+                local ok, res = pcall(function()
+                    return HttpService:JSONDecode(game:HttpGet("https://api.github.com/repos/Henrynah/source/git/trees/main?recursive=1"))
+                end)
+                
+                if ok and res.tree then
+                    fetchBtn:Destroy()
+                    for _, item in ipairs(res.tree) do
+                        if item.type == "blob" and item.path:find("%.lua$") then
+                            local fileBtn = Instance.new("TextButton")
+                            fileBtn.Size = UDim2.new(1, 0, 0, 20)
+                            fileBtn.BackgroundTransparency = 1
+                            fileBtn.Text = "[-] " .. item.path
+                            fileBtn.TextColor3 = Theme.TextDim
+                            fileBtn.Font = Theme.Font
+                            fileBtn.TextSize = 11
+                            fileBtn.TextXAlignment = Enum.TextXAlignment.Left
+                            fileBtn.Parent = ScrollFrame
+                            
+                            fileBtn.MouseButton1Click:Connect(function()
+                                local url = "https://raw.githubusercontent.com/Henrynah/source/main/" .. item.path
+                                ExecuteScript(item.path, url)
+                            end)
+                        end
+                    end
+                else
+                    fetchBtn.Text = "[-] Failed to fetch. (Rate limit?)"
+                end
+            end)
+        end)
+        return
+    end
+
+    -- ===== NORMAL LISTS =====
+    local list = Database[catName] or {}
+    
+    if catName == "Favorites" then
+        for _, n in ipairs(Config.Favorites) do
+            for _, c in pairs(Database) do
+                if c[n] then table.insert(list, {Name = n, Url = c[n]}) end
+            end
+        end
+    elseif catName == "Recent" then
+        for _, n in ipairs(Config.Recent) do
+            for _, c in pairs(Database) do
+                if c[n] then table.insert(list, {Name = n, Url = c[n]}) end
+            end
+        end
+    end
+
+    local sorted = {}
+    for k, v in pairs(list) do 
+        local name = type(k) == "number" and v.Name or k
+        local url = type(k) == "number" and v.Url or v
+        if not filter or filter == "" or name:lower():find(filter:lower()) then 
+            table.insert(sorted, {Name = name, Url = url}) 
+        end
+    end
+    table.sort(sorted, function(a,b) return a.Name < b.Name end)
+
+    for i, data in ipairs(sorted) do
+        local isFav = table.find(Config.Favorites, data.Name)
+        
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, 0, 0, 20)
+        btn.BackgroundTransparency = 1
+        btn.Text = (isFav and "[-] ★ " or "[-]   ") .. "[" .. i .. "] " .. data.Name
+        btn.TextColor3 = isFav and Theme.Green or Theme.TextDim
+        btn.Font = Theme.Font
+        btn.TextSize = 11
+        btn.TextXAlignment = Enum.TextXAlignment.Left
+        btn.Parent = ScrollFrame
+        
+        btn.MouseEnter:Connect(function() btn.TextColor3 = Theme.TextMain end)
+        btn.MouseLeave:Connect(function() btn.TextColor3 = isFav and Theme.Green or Theme.TextDim end)
+        
+        btn.MouseButton1Click:Connect(function()
+            ExecuteScript(data.Name, data.Url)
+        end)
+    end
+end
+
+-- ==============================================================================
+-- EVENTS
+-- ==============================================================================
+SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+    LoadCategory(CurrentCategory, SearchBox.Text)
+end)
+
+InputBox.FocusLost:Connect(function(enterPressed)
+    if enterPressed and InputBox.Text ~= "" then 
+        local url = InputBox.Text:match("^https?://") and InputBox.Text or nil
+        if url then ExecuteScript("Custom URL", url) else
+            addLog("Not a valid URL.", Theme.Error)
+        end
+        InputBox.Text = ""
+    end
+end)
+
+local dragging, dragStart, startPos
+TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = Main.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    
+    if input.KeyCode == Enum.KeyCode.Escape then 
+        ScreenGui:Destroy() 
+    end
+    
+    if MenuFrame.Visible and input.KeyCode == Enum.KeyCode.Tab then
+        local tabs = {}
+        for _, t in ipairs(MainTabs) do table.insert(tabs, t) end
+        if Config.IsAdmin then
+            for _, t in ipairs(AdminTabs) do table.insert(tabs, "★ " .. t) end
+        end
+        
+        local index = 1
+        for i, t in ipairs(tabs) do
+            if t == CurrentCategory then index = i; break end
+        end
+        
+        local isShift = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.RightShift)
+        
+        if isShift then
+            index = index - 1
+            if index < 1 then index = #tabs end
+        else
+            index = index + 1
+            if index > #tabs then index = 1 end
+        end
+        
+        CurrentCategory = tabs[index]
+        BuildSidebar()
+        LoadCategory(CurrentCategory, SearchBox.Text)
+        addLog("Switched to: " .. CurrentCategory, Theme.TextDim)
+    end
+end)
+
+-- ==============================================================================
+-- STARTUP SEQUENCE
+-- ==============================================================================
+task.spawn(function()
+    task.wait(1)
+    LoadStatus.Text = "[-] Loading Configs..."
+    task.wait(0.5)
+    LoadStatus.Text = "[-] Establishing Connection..."
+    task.wait(0.5)
+    LoadStatus.Text = "[-] Loading UI..."
+    task.wait(0.5)
+    
+    LoadingFrame.Visible = false
+    MenuFrame.Visible = true
+    
+    -- Wait 1 frame for Roblox to calculate UI sizes properly
+    task.wait(0.1)
+    
+    BuildSidebar()
+    LoadCategory("Premium")
+    addLog("System loaded successfully.", Theme.Green)
+end)
